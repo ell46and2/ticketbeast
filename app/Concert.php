@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Exceptions\NotEnoughTicketsException;
 use Illuminate\Database\Eloquent\Model;
 
 class Concert extends Model
@@ -11,6 +12,17 @@ class Concert extends Model
     // Will automatically turn that column into a Carbon object.
     // So we can do things like $concert->date->format('d/m/Y')
     protected $dates = ['date'];
+
+
+    public function orders() {
+        
+        return $this->hasMany(Order::class);
+    }
+
+    public function tickets() {
+        
+        return $this->hasMany(Ticket::class);
+    }
 
 
     /* 
@@ -40,20 +52,35 @@ class Concert extends Model
     	return number_format($this->ticket_price / 100, 2);
     }
 
-    public function orders() {
-    	
-    	return $this->hasMany(Order::class);
-    }
-
     public function orderTickets($email, $ticketQuantity) {
     	
-    	$order = $this->orders()->create(['email' => $email]);
+    	$tickets = $this->tickets()->available()->take($ticketQuantity)->get();
 
-    	// create tickets
-		foreach (range(1, $ticketQuantity) as $i) {
-			$order->tickets()->create([]);
-		}
+        if ($tickets->count() < $ticketQuantity) {
+            
+            throw new NotEnoughTicketsException;     
+        }
+
+        $order = $this->orders()->create(['email' => $email]);
+
+
+        foreach ($tickets as $ticket) {
+            
+            $order->tickets()->save($ticket);
+        }
 
 		return $order;
+    }
+
+    public function addTickets($quantity) {
+        
+        foreach (range(1, $quantity) as $i) {
+            $this->tickets()->create([]);
+        }    
+    }
+
+    public function ticketsRemaining() {
+        
+        return $this->tickets()->available()->count();
     }
 }
