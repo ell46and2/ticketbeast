@@ -51,3 +51,17 @@ $factory->state(App\Concert::class, 'unpublished', function($faker) {
 		'published_at' => null
 	];
 });
+
+$factory->define(App\Ticket::class, function(Faker\Generator $faker) {
+	return [
+		'concert_id' => function () {
+			return factory(App\Concert::class)->create()->id;
+		}
+	];
+});
+
+$factory->state(App\Ticket::class, 'reserved', function($faker) {
+	return [
+		'reserved_at' => Carbon::now()
+	];
+});
