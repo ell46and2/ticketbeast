@@ -167,6 +167,7 @@ return [
          * Package Service Providers...
          */
         Zondicons\ZondiconsServiceProvider::class,
+        Vinkla\Hashids\HashidsServiceProvider::class,
 
         /*
          * Application Service Providers...
@@ -225,5 +226,8 @@ return [
         'View' => Illuminate\Support\Facades\View::class,
 
     ],
+
+
+    'ticket_code_salt' => env('TICKET_CODE_SALT'),
 
 ];

@@ -1,12 +1,14 @@
 <?php
 
-use App\Concert;
 use App\Billing\FakePaymentGateway;
 use App\Billing\PaymentGateway;
-
-use Illuminate\Foundation\Testing\WithoutMiddleware;
+use App\Concert;
+use App\Facades\OrderConfirmationNumber;
+use App\Facades\TicketCode;
+use App\OrderConfirmationNumberGenerator;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\WithoutMiddleware;
 
 class PurchaseTicketsTest extends TestCase
 {
@@ -31,7 +33,7 @@ class PurchaseTicketsTest extends TestCase
         
         $savedRequest = $this->app['request'];
 
-        $this->json('POST', "/concerts/{$concert->id}/orders", $params);
+        $this->response = $this->json('POST', "/concerts/{$concert->id}/orders", $params);
 
         $this->app['request'] = $savedRequest;
     }
@@ -39,14 +41,26 @@ class PurchaseTicketsTest extends TestCase
     // helper function to reduce duplication in tests.
     private function assertValidationError($field) {
         // failed validation will return status code 422
-        $this->assertResponseStatus(422);
+        $this->response->assertStatus(422);
         // the failed field should be in the decodeResponseJson array.
-        $this->assertArrayHasKey($field, $this->decodeResponseJson());
+        $this->assertArrayHasKey($field, $this->response->decodeResponseJson());
     }
 
     /** @test */
     function customer_can_purchase_tickets_to_a_published_concert()
     {
+        // Create a mock orderConfirmationNumberGenerator so we can determine the confirmation number for our test
+        // $orderConfirmationNumberGenerator = Mockery::mock(OrderConfirmationNumberGenerator::class, [
+        //     'generate' => 'ORDERCONFIRMATION123'
+        // ]);
+        // // Use the mock instead of the real thing for our test.
+        // $this->app->instance(OrderConfirmationNumberGenerator::class, $orderConfirmationNumberGenerator);
+
+        // Preprogram the facade to return 'ORDERCONFIRMATION123' for the 'generate' method.
+        OrderConfirmationNumber::shouldReceive('generate')->andReturn('ORDERCONFIRMATION123');
+
+        TicketCode::shouldReceive('generateFor')->andReturn('TICKETCODE1', 'TICKETCODE2', 'TICKETCODE3');
+
         // Create a concert
         $concert = factory(Concert::class)->states('published')->create(['ticket_price' => 3250])->addTickets(3);
 
@@ -58,13 +72,18 @@ class PurchaseTicketsTest extends TestCase
         ]);
 
         // Assert route
-        $this->assertResponseStatus(201);
+        $this->response->assertStatus(201);
 
         // Assert that the response Json contains the following:
-        $this->seeJsonSubset([
+        $this->response->assertJson([
+            'confirmation_number' => 'ORDERCONFIRMATION123',
             'email' => 'john@example.com',
-            'ticket_quantity' => 3,
-            'amount' => 9750
+            'amount' => 9750,
+            'tickets'=> [
+                ['code' => 'TICKETCODE1'],
+                ['code' => 'TICKETCODE2'],
+                ['code' => 'TICKETCODE3']
+            ]
         ]);
 
         // Make sure customer was charged the correct amount
@@ -89,7 +108,7 @@ class PurchaseTicketsTest extends TestCase
             'payment_token' => $this->paymentGateway->getValidTestToken()
         ]);
 
-        $this->assertResponseStatus(404);
+        $this->response->assertStatus(404);
         $this->assertFalse($concert->hasOrderFor('john@example.com'));
         // Make sure customer was not charged 
         $this->assertEquals(0, $this->paymentGateway->totalCharges());
@@ -109,7 +128,7 @@ class PurchaseTicketsTest extends TestCase
             'payment_token' => $this->paymentGateway->getValidTestToken()
         ]);
 
-        $this->assertResponseStatus(422);
+        $this->response->assertStatus(422);
         $this->assertFalse($concert->hasOrderFor('john@example.com'));
         // Make sure customer was not charged 
         $this->assertEquals(0, $this->paymentGateway->totalCharges());
@@ -130,7 +149,7 @@ class PurchaseTicketsTest extends TestCase
             ]);
 
 
-            $this->assertResponseStatus(422);
+            $this->response->assertStatus(422);
             $this->assertFalse($concert->hasOrderFor('personBexample.com'));
             // Make sure customer was not charged 
             $this->assertEquals(0, $this->paymentGateway->totalCharges());
@@ -226,7 +245,7 @@ class PurchaseTicketsTest extends TestCase
             'payment_token' => 'invalid-payment-token'
         ]);
 
-        $this->assertResponseStatus(422);
+        $this->response->assertStatus(422);
         $this->assertFalse($concert->hasOrderFor('john@example.com'));
         $this->assertEquals(3, $concert->ticketsRemaining());
     }
