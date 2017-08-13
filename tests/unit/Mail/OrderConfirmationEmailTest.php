@@ -1,10 +1,13 @@
 <?php
 
+namespace Tests\Unit\Mail;
+
 use App\Mail\OrderConfirmationEmail;
 use App\Order;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Foundation\Testing\WithoutMiddleware;
+use Tests\TestCase;
 
 class OrderConfirmationEmailTest extends TestCase
 {

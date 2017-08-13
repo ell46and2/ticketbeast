@@ -1,10 +1,13 @@
 <?php
 
+namespace Tests\Unit;
+
 use App\HashidsTicketCodeGenerator;
 use App\Ticket;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Foundation\Testing\WithoutMiddleware;
+use Tests\TestCase;
 
 class HashidsTicketCodeGeneratorTest extends TestCase
 {
