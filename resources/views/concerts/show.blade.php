@@ -14,7 +14,7 @@
                         <div class="m-xs-b-5">
                             <div class="media-object">
                                 <div class="media-left">
-                                    @icon('calendar')
+                                    @icon('calendar', 'text-brand-muted')
                                 </div>
                                 <div class="media-body p-xs-l-2">
                                     <span class="wt-medium">{{ $concert->formatted_date }}</span>

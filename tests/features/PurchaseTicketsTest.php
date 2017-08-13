@@ -5,10 +5,12 @@ use App\Billing\PaymentGateway;
 use App\Concert;
 use App\Facades\OrderConfirmationNumber;
 use App\Facades\TicketCode;
+use App\Mail\OrderConfirmationEmail;
 use App\OrderConfirmationNumberGenerator;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Foundation\Testing\WithoutMiddleware;
+use Illuminate\Support\Facades\Mail;
 
 class PurchaseTicketsTest extends TestCase
 {
@@ -25,6 +27,9 @@ class PurchaseTicketsTest extends TestCase
         */
         // Calls to the PaymentGateway class (for testing purposes) will return the $paymentgateway (FakePaymentGateway)
         $this->app->instance(PaymentGateway::class, $this->paymentGateway);
+
+        // Use Laravels Mail Fake
+        Mail::fake();
     }
 
 
@@ -93,8 +98,17 @@ class PurchaseTicketsTest extends TestCase
         // $order = $concert->orders()->where('email', 'john@example.com')->first();
         // $this->assertNotNull($order);
 
+        $order = $concert->ordersFor('john@example.com')->first();
+
         $this->assertTrue($concert->hasOrderFor('john@example.com'));
-        $this->assertEquals(3, $concert->ordersFor('john@example.com')->first()->ticketQuantity());
+        $this->assertEquals(3, $order->ticketQuantity());
+
+        // Check email was sent
+        Mail::assertSent(OrderConfirmationEmail::class, function($mail) use ($order) {
+
+            return $mail->hasTo('john@example.com')
+                && $mail->order->id == $order->id;
+        });
     }
 
     /** @test */
