@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Backstage;
 
 use App\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
@@ -55,6 +55,12 @@ class PromoterLoginTest extends TestCase
         // check that the session has an error (laravel sets error for email if password and/or email is incorrect).
         $response->assertSessionHasErrors('email');
 
+        // check that the old input email is prepopulated in the form.
+        $this->assertTrue(session()->hasOldInput('email'));
+
+        // check that the old input password is NOT prepopulated in the form.
+        $this->assertFalse(session()->hasOldInput('password'));
+
         // check that no user is logged in
         $this->assertFalse(Auth::check());
 
@@ -79,5 +85,16 @@ class PromoterLoginTest extends TestCase
         $this->assertFalse(Auth::check());
 
   
+    }
+
+    /** @test */
+    public function logging_out_the_current_user()
+    {
+        Auth::login(factory(User::class)->create());
+
+        $response = $this->post('/logout');
+
+        $response->assertRedirect('/login');
+        $this->assertFalse(Auth::check());    
     }
 }
